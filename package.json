@@ -1,0 +1,29 @@
+{
+  "name": "hms-backend-node",
+  "version": "1.0.0",
+  "description": "Hospital Management System Backend using pure Node.js",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "nodejs",
+    "postgresql",
+    "hms",
+    "backend"
+
+  ],
+  "author": "Gaurav Singh",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
