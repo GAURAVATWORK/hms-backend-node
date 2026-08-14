@@ -4,7 +4,7 @@ A production-ready Hospital Management System (HMS) backend built with **Node.js
 
 ## About this project
 
-Hi, I'm **Gaurav Singh**, a **Flutter Developer** with experience in building production mobile applications for healthcare and telemedicine platforms.
+Hi, I'm **Gaurav Singh**, a **Flutter Developer** with experience in building production mobile applications.
 
 To strengthen my full-stack development skills, I started building backend systems from scratch using **Node.js, Express.js, and PostgreSQL**. This repository is part of my backend engineering journey, where I am implementing real-world backend features using production-level architecture and best practices.
 
