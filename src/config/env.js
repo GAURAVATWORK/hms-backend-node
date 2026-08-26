@@ -12,7 +12,6 @@ const requiredVariables = [
 ];
 
 for (const variable of requiredVariables) {
-    console.log(variable, process.env[variable]);
 
     if (!process.env[variable]) {
         throw new Error(

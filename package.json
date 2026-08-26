@@ -6,14 +6,16 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "db:create": "node scripts/create-database.js",
+    "db:migrate": "node src/database/migrate.js",
+    "db:transaction": "node scripts/transaction-demo.js"
   },
   "keywords": [
     "nodejs",
     "postgresql",
     "hms",
     "backend"
-
   ],
   "author": "Gaurav Singh",
   "license": "ISC",
