@@ -10,7 +10,9 @@ const startServer = async() => {
       serverConfig.port,
       serverConfig.host,
       () => {
-        console.log("Server running on http://${serverConfig.host}:${serverConfig.port}");
+console.log(
+    `Server running on http://localhost:${serverConfig.port}`
+);
       }
     );
   } catch(error){
