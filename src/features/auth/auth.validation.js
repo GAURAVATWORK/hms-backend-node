@@ -73,6 +73,86 @@ const validateResendVerification = (data) => {
 
 };
 
-export { validateResendVerification };
+const validateLogin = (data) => {
+
+const errors = {};
+
+if(!data.email || typeof data.email !== "string"){
+    errors.email = "Email is required";
+}
+
+if(!data.password || typeof data.password !== "string"){
+    errors.password = "Password is required";
+}
+
+ return{
+  isValid: Object.keys(errors).length === 0,
+  errors,
+ };
+
+};
+
+
+const validateForgotPassword = (data) =>{
+
+    const errors = {};
+
+    if(!data || typeof data !== "object"){
+        errors.general = "Request body must be a valid JSON object";
+        return {
+            isValid: false,
+            errors,
+        };
+        }
+    if(!data.email.trim() || typeof data.email !== "string"){
+
+        errors.email = "Email is required";
+    }
+
+    return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+    };
+
+};
+
+
+const validateResetPassword = (data) => {
+
+    const errors = {};
+
+    if(!data || typeof data !== "object"){
+        errors.general = "Request body must be a valid JSON object";
+        return {
+         isValid: false,
+         errors,
+        };
+    }
+
+   if(!data.token.trim() || typeof data.token !== "string"){
+    errors.token = "Reset token is required";
+   } 
+
+   if(!data.newPassword || typeof data.newPassword !== "string"){
+    errors.newPassword = "New password is required";
+   } else if(data.newPassword < 8){
+    errors.newPassword = "Password must be at least 8 characters";
+   }
+
+   return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+   };
+
+};
+
+
+
+export { 
+    validateResendVerification,
+    validateLogin,
+    validateForgotPassword,
+    validateResetPassword,    
+ };
 
 export default validateSignup;

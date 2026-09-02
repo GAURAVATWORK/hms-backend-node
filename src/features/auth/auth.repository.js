@@ -244,11 +244,211 @@ const replaceEmailVerificationToken = async ({
 };
 
 
+const findUserForLogin = async (email) => {
+    const result = await pool.query(
+        `SELECT
+          u.id,
+          u.email,
+          u.password_hash,
+          u.role,
+          u.is_email_verified,
+          u.is_active,
+          p.name
+
+          FROM users u
+          LEFT JOIN patients p
+           on p.user_id = u.id
+          WHERE u.email = $1
+          LIMIT 1`,
+          [email]
+    );
+        return result.rows[0] ?? null;
+
+
+};
+
+
+const findUserForPasswordReset = async (email) => {
+
+    const result = await pool.query(
+        `SELECT
+          u.id,
+          u.email,
+          u.is_email_verified,
+          u.is_active,
+          p.name
+          FROM users u
+          LEFT JOIN patients p
+           ON p.user_id = u.id
+          WHERE u.email = $1
+          LIMIT 1` ,
+          [email]
+    );
+
+    return result.rows[0] ?? null;
+
+};
+
+
+const replacePasswordResetToken = async({
+    userId,
+    resetTokenHash,
+    resetTokenExpiresAt
+}) => {
+
+    const client = await pool.connect();
+
+    try{
+      
+        await client.query("BEGIN");
+
+        await client.query(
+            `DELETE FROM password_reset_tokens
+             WHERE user_id = $1`,
+             [userId]
+        );
+
+        await client.query(
+            `INSERT INTO password_reset_tokens(
+             user_id,
+             token_hash,
+             expires_at 
+            )
+             VALUES($1, $2, $3)`,
+             [
+                userId,
+                resetTokenHash,
+                resetTokenExpiresAt
+             ]
+        );
+
+        await client.query("COMMIT");
+         
+    } catch(error){
+        await client.query("ROLLBACK");
+        throw error;
+
+    } finally{
+        client.release();
+
+    }
+
+};
+
+const resetPassword = async({
+    tokenHash,
+    passwordHash
+}) => {
+  
+    const client = await pool.connect();
+
+    try{
+      
+        await client.query("BEGIN");
+
+        const tokenResult = await client.query(
+         `SELECT
+          prt.id,
+          prt.user_id,
+          prt.expires_at,
+          prt.used_at
+
+          FROM password_reset_tokens prt\
+          WHERE prt.token_hash = $1
+          LIMIT 1  
+          FOR UPDATE`,
+          [tokenHash]
+        );
+
+       const resetToken = tokenResult.rows[0] ?? null;
+
+       if(!resetToken){
+        await client.query("ROLLBACK");
+        return {
+            status: "NOT_FOUND"
+        };
+       }
+
+       if(resetToken.used_at){
+        await client.query("ROLLBACK");
+
+        return {
+            status: "ALREADY_USED"
+        };
+       }
+
+      if(new Date(resetToken.expires_at) <= new Date()){
+        await client.query("ROLLBACK");
+        return {
+        status: "EXPIRED"
+        };
+      } 
+
+      const userResult = await client.query(
+        `UPDATE users
+         SET
+            password_hash = $1,
+            updated_at = Now()
+         WHERE id = $2
+            AND is_active = TRUE
+            RETURNING id`,
+            [
+                passwordHash,
+                resetToken.user_id
+            ]
+      );
+
+      const user = userResult.rows[0] ?? null;
+
+      if(!user){
+        await client.query("ROLLBACK");
+
+        return {
+            status: "USER_NOT_FOUND"
+        };
+      }
+
+      await client.query(
+        `UPDATE password_reset_tokens
+         SET used_at = NOW()
+         WHERE id = $1`,
+         [resetToken.id]
+      );
+
+      await client.query("COMMIT");
+
+      return{
+        status: "PASSWORD_RESET"
+      };
+
+    } catch(error){
+    
+    await client.query("ROLLBAKCK");
+    
+    throw error;
+
+    } finally{
+        client.release();
+
+    }
+
+};
+
+
+
+
+
 const authRepository = {
     findUserByEmail,
+    findUserForLogin,
     createPatientAccount,
     verifyEmailToken,
     replaceEmailVerificationToken,
+    findUserForPasswordReset,
+    replacePasswordResetToken,
+    resetPassword,
 };
+
+
 
 export default authRepository;

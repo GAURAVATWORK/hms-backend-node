@@ -1,6 +1,6 @@
 import http from "http";
 import authRoutes from "./features/auth/auth.routes.js";
-import { error } from "console";
+import webRoutes from "./routes/web.routes.js";
 
 const app = http.createServer(async(req, res) =>{
     try{
@@ -10,8 +10,14 @@ const app = http.createServer(async(req, res) =>{
             return;
         }
 
+        const webRouteHandled = await webRoutes(req, res);
+
+        if(webRouteHandled){
+            return;
+        }
+
         res.statusCode = 404;
-        res.setHeader("Cotent-Type", "application/json");
+        res.setHeader("Content-Type", "application/json");
 
         res.end(
             JSON.stringify({
@@ -27,13 +33,13 @@ const app = http.createServer(async(req, res) =>{
         console.error("Unhandled request error:", error);
 
         res.statusCode = 500;
-        res.setHeader("Conten-Type", "application/json");
+        res.setHeader("Content-Type", "application/json");
 
         res.end(
             JSON.stringify({
                 success: false,
                 error: {
-                    code: "INTERNET_SERVER_ERROR",
+                    code: "INTERNAL_SERVER_ERROR",
                     message:"An unexpected error occurred."
                 }
             })
