@@ -9,7 +9,8 @@
     "dev": "nodemon src/index.js",
     "db:create": "node scripts/create-database.js",
     "db:migrate": "node src/database/migrate.js",
-    "db:transaction": "node scripts/transaction-demo.js"
+    "db:transaction": "node scripts/transaction-demo.js",
+    "jwt:keys": "node scripts/generate-jwt-keys.js"
   },
   "keywords": [
     "nodejs",

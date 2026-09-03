@@ -1,4 +1,13 @@
-import {forgotPasswordController, loginController, resendVerificationController, resetPasswordController, signupController, verificationEmailController} from "./auth.controller.js";
+import {
+    loginController,
+    resendVerificationController,
+    forgotPasswordController,
+    resetPasswordController,
+    signupController,
+    verificationEmailController
+} from "./auth.controller.js";
+
+import { refreshTokenController} from "./refresh-token.controller.js";
 
 const authRoutes = async  (req, res) => {
     const requestUrl = new URL(
@@ -28,6 +37,12 @@ const authRoutes = async  (req, res) => {
         await loginController(req, res);
         return true;
     }
+
+    if ( req.method === "POST" && requestUrl.pathname === "/api/v1/auth/refresh"
+) {
+    await refreshTokenController(req, res);
+    return true;
+}
 
 if (
     req.method === "POST" &&

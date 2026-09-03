@@ -4,6 +4,11 @@ import validateSignup, {validateForgotPassword, validateLogin, validateResendVer
 import authRepository from "./auth.repository.js";
 import {generateVerificationToken, hashToken,} from "../../utils/token.js";
 import emailService from "../../services/email/email.service.js";
+import {generateAccessToken} from "../../utils/jwt.js";
+import { generateRefreshToken, hashRefreshToken} from "../../utils/refresh-token.js";
+import { calculateExpiration } from "../../utils/expiration.js";
+import jwtConfig from "../../config/jwt.js";
+import {createRefreshToken} from "./refresh-token.repository.js";
 
 
 const generatePatientNumber = () =>{
@@ -194,9 +199,9 @@ const password = data.password;
 const user = await authRepository.findUserForLogin(email);
 
 if(!user){
-          const error = new Error("Invalid email or password");
-          error.code = "INVALID_CREDENTIALS";
-          error.statusCode = 401;
+  const error = new Error("Invalid email or password");
+        error.code = "INVALID_CREDENTIALS";
+        error.statusCode = 401;
         throw error;
 
 }
@@ -228,13 +233,40 @@ if(!passwordMatch){
   throw error;
 }
 
-// token generation will be added next
+    const accessToken = generateAccessToken({
+        userId: user.id,
+        userType: user.role
+    });
 
+    const refreshToken = generateRefreshToken();
+
+    const refreshTokenHash = hashRefreshToken(refreshToken);
+    
+    const familyId = crypto.randomUUID();
+
+    const createdAt = new Date();
+
+    const refreshTokenExpiresAt = calculateExpiration(
+      createdAt,
+      jwtConfig.refreshExpiresIn
+    );
+    await createRefreshToken({
+      userId: user.id,
+      familyId,
+      tokenHash: refreshTokenHash,
+      expiresAt: refreshTokenExpiresAt
+    });
+
+    
 return{
+  accessToken,
+  refreshToken,
+  user:{
   userId: user.id,
   name:  user.name,
   email: user.email,
   role:  user.role 
+  }
 };
 };
 
