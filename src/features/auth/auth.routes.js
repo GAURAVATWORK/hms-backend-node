@@ -9,6 +9,10 @@ import {
 
 import { refreshTokenController} from "./refresh-token.controller.js";
 
+import {logoutController} from "./logout.controller.js";
+
+import authentication from "../../middleware/authentication.js";
+
 const authRoutes = async  (req, res) => {
     const requestUrl = new URL(
         req.url,
@@ -37,6 +41,24 @@ const authRoutes = async  (req, res) => {
         await loginController(req, res);
         return true;
     }
+
+    if (req.method === "POST" && requestUrl.pathname === "/api/v1/auth/logout"
+) {
+
+    authentication(
+        req,
+        res,
+        async () => {
+
+            await logoutController(
+                req,
+                res
+            );
+        }
+    );
+
+    return true;
+}
 
     if ( req.method === "POST" && requestUrl.pathname === "/api/v1/auth/refresh"
 ) {
