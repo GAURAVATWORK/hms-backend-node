@@ -1,3 +1,4 @@
+
 const authorization = (
     ...allowedUserTypes
 ) => {
@@ -14,8 +15,7 @@ const authorization = (
                 "Authentication required"
             );
 
-            error.code =
-                "AUTHENTICATION_REQUIRED";
+            error.code = "AUTHENTICATION_REQUIRED";
 
             error.statusCode = 401;
 

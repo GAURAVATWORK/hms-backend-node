@@ -2,6 +2,7 @@ import http from "http";
 
 import authRoutes from "./features/auth/auth.routes.js";
 import webRoutes from "./routes/web.routes.js";
+import profileRoutes from "./features/profile/profile.routes.js";
 
 
 const app = http.createServer(
@@ -12,6 +13,12 @@ const app = http.createServer(
             const authRouteHandled = await authRoutes(req, res);
 
             if (authRouteHandled) {
+                return;
+            }
+
+            const profileRouteHandled = await profileRoutes(req, res);
+
+            if(profileRouteHandled){
                 return;
             }
 

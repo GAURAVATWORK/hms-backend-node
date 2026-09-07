@@ -1,0 +1,9 @@
+import USER_ROLES from "./roles.js";
+
+const AUTHENTICATED_USER_ROLES = [
+    USER_ROLES.PATIENT,
+    USER_ROLES.DOCTOR,
+    USER_ROLES.ADMIN
+];
+
+export { AUTHENTICATED_USER_ROLES};
