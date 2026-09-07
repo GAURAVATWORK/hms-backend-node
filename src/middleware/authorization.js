@@ -1,73 +1,46 @@
-const authorization = (...allowedUserTypes) => {
+const authorization = (
+    ...allowedUserTypes
+) => {
 
-    return (req, res, next) => {
+    return async (
+        req,
+        res,
+        next
+    ) => {
 
-        try {
+        if (!req.user) {
 
-            if (!req.user) {
-
-                const error = new Error(
-                    "Authentication required"
-                );
-
-                error.code =
-                    "AUTHENTICATION_REQUIRED";
-
-                error.statusCode = 401;
-
-                throw error;
-            }
-
-            if (
-                !allowedUserTypes.includes(
-                    req.user.userType
-                )
-            ) {
-
-                const error = new Error(
-                    "You are not authorized to access this resource"
-                );
-
-                error.code =
-                    "FORBIDDEN";
-
-                error.statusCode = 403;
-
-                throw error;
-            }
-
-            next();
-
-        } catch (error) {
-
-            console.error(
-                "Authorization error:",
-                error.message
+            const error = new Error(
+                "Authentication required"
             );
 
-            res.statusCode =
-                error.statusCode || 403;
+            error.code =
+                "AUTHENTICATION_REQUIRED";
 
-            res.setHeader(
-                "Content-Type",
-                "application/json"
-            );
+            error.statusCode = 401;
 
-            res.end(
-                JSON.stringify({
-                    success: false,
-                    error: {
-                        code:
-                            error.code ||
-                            "FORBIDDEN",
-                        message:
-                            error.statusCode
-                                ? error.message
-                                : "Access denied"
-                    }
-                })
-            );
+            throw error;
         }
+
+
+        if (
+            !allowedUserTypes.includes(
+                req.user.userType
+            )
+        ) {
+
+            const error = new Error(
+                "You are not authorized to access this resource"
+            );
+
+            error.code = "FORBIDDEN";
+            error.statusCode = 403;
+
+            throw error;
+        }
+
+
+        return next();
     };
 };
 
