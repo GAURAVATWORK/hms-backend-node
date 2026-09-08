@@ -2,7 +2,7 @@ import authentication from "../../middleware/authentication.js";
 import authorizaton from "../../middleware/authorization.js";
 import runMiddleware from "../../middleware/pipeline.js";
 import {AUTHENTICATED_USER_ROLES} from "../../constants/authorization.js";
-import {getProfileController} from "./profile.controller.js";
+import {getProfileController, updateProfileController} from "./profile.controller.js";
 
 
 const profileRoutes = async (req, res) => {
@@ -25,6 +25,26 @@ const profileRoutes = async (req, res) => {
     );
     return true;
   }
+
+    /*
+     * PATCH /api/v1/profile
+     */
+
+   if(req.method == "PATCH" && requestUrl.pathname === "/api/v1/profile"){
+    await runMiddleware(
+        req,
+        res,
+        [
+            authentication,
+            authorizaton(
+                ...AUTHENTICATED_USER_ROLES
+            )
+        ],
+            updateProfileController
+    );
+    return true; 
+ } 
+
   return false;
 };
 
