@@ -15,6 +15,7 @@ const requiredVariables = [
 "MAIL_PASSWORD",
 "MAIL_FROM",
 "API_BASE_URL",
+"LOCAL_STORAGE_PATH",
 "JWT_PRIVATE_KEY_PATH",
 "JWT_PUBLIC_KEY_PATH",
 "JWT_ACCESS_EXPIRES_IN",
@@ -62,9 +63,9 @@ const env = {
 
     },
 
-    apiBaseUrl: process.env.API_BASE_URL
+    apiBaseUrl: process.env.API_BASE_URL,
 
-
+    localStoragePath: process.env.LOCAL_STORAGE_PATH,
 
 };
 
