@@ -4,7 +4,7 @@ import authRoutes from "./features/auth/auth.routes.js";
 import webRoutes from "./routes/web.routes.js";
 import profileRoutes from "./features/profile/profile.routes.js";
 import specialityRoutes from "./features/speciality/speciality.routes.js";
-
+import qualificationRoutes from "./features/qualification/qualification.routes.js";
 import { handleLocalStorageRequest} from "./services/storage/local-storage.handler.js";
 
 const handleStorageRoute = async (req, res) => {
@@ -56,6 +56,11 @@ const app = http.createServer(
         if (specialityRouteHandled) {
             return;
                 }
+        const qualificationRouteHandled = await qualificationRoutes(req, res);
+
+     if (qualificationRouteHandled) {
+        return;
+       }
 
 
             const storageRouteHandled =
