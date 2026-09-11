@@ -9,7 +9,7 @@ import { generateRefreshToken, hashRefreshToken} from "../../utils/refresh-token
 import { calculateExpiration } from "../../utils/expiration.js";
 import jwtConfig from "../../config/jwt.js";
 import {createRefreshToken} from "./refresh-token.repository.js";
-
+import User_Roles from "../../constants/roles.js";
 
 const generatePatientNumber = () =>{
   const randomPart = crypto.randomBytes(6)
@@ -17,6 +17,16 @@ const generatePatientNumber = () =>{
                            .toUpperCase();
   return `PAT-${randomPart}`;
 };
+
+const generateDoctorNumber  = ()=> {
+  const randomPart = crypto.randomBytes(6)
+                           .toString("hex")
+                            .toUpperCase();
+        return `DOC-${randomPart}`;                           
+};
+
+
+
 
 const signup = async(data) => {
   const validationResult = validateSignup(data);
@@ -28,6 +38,8 @@ const signup = async(data) => {
     error.details = validationResult.errors;
     throw error;
   } 
+
+  const userType = data.userType ?? User_Roles.PATIENT;
   
   const email = data.email.trim().toLowerCase();
   const password = data.password;
@@ -45,7 +57,6 @@ const signup = async(data) => {
   
   const passwordHash = await bcrypt.hash(password, 12);
   
-  const patientNumber = generatePatientNumber();
 
   const verificationToken = generateVerificationToken();
 
@@ -54,8 +65,23 @@ const signup = async(data) => {
   const verificationTokenExpiresAt = new Date(Date.now() + 30 * 60 *1000);
 
 
+  let user;
 
-  const user = await authRepository.createPatientAccount({
+
+  if(userType === User_Roles.DOCTOR){
+    const doctorNumber = generateDoctorNumber();
+    user = await authRepository.createDoctorAccount({
+    email,
+    passwordHash,
+    name,
+    doctorNumber,
+    verificationTokenHash,
+    verificationTokenExpiresAt,
+    });
+  } else {
+  const patientNumber = generatePatientNumber();
+  
+  user = await authRepository.createPatientAccount({
    email,
    passwordHash,
    name,
@@ -64,17 +90,29 @@ const signup = async(data) => {
    verificationTokenExpiresAt,
   });
   
+  }
+
+
 await emailService.sendVerificationEmail({
   email,
   verificationToken,
 });
 
-  return {
-   userId: user.userId,
-   patientNumber: user.patientNumber,
-   email: user.email,
-   name: user.name
-  };
+ const response = {
+  userId: user.useId,
+  email: user.email,
+  name: user.name,
+  role: userType,
+ };
+
+ if(userType == User_Roles.DOCTOR){
+  response.doctorNumber = user.doctorNumber; 
+ } else{
+  response.patientNumber = user.patientNumber;
+ }
+
+ return response;
+
 };
 
 
@@ -257,16 +295,23 @@ if(!passwordMatch){
       expiresAt: refreshTokenExpiresAt
     });
 
+    const userResponse = {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role
+};
+
+if (user.role === User_Roles.DOCTOR) {
+    userResponse.doctorRegistrationStatus = user.doctor_registration_status;
+}
+
+    
     
 return{
   accessToken,
   refreshToken,
-  user:{
-  userId: user.id,
-  name:  user.name,
-  email: user.email,
-  role:  user.role 
-  }
+  user: userResponse
 };
 };
 

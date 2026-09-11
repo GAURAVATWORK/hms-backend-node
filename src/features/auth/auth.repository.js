@@ -104,6 +104,96 @@ const createPatientAccount = async ({
 
 
 
+const createDoctorAccount  = async({
+    email,
+    passwordHash,
+    name,
+    doctorNumber,
+    verificationTokenHash,
+    verificationTokenExpiresAt,
+}) => {
+
+     const client = await pool.connect();
+
+     try {
+       
+        await client.query("BEGIN");
+
+        const userResult = await client.query(
+         
+            `INSERT INTO users(
+                             email,
+                password_hash,
+                role,
+                is_email_verified,
+                is_active 
+            )
+            VALUES($1, $2, 'DOCTOR', false, TRUE)
+            RETURNING id, email`,
+            [
+                email,
+                passwordHash
+            ]
+        );
+
+        const user = userResult.rows[0];
+
+        const doctorResult = await client.query(
+            `INSERT INTO doctors(
+                             user_id,
+                doctor_number,
+                name,
+                doctor_registration_status
+            )
+            VALUES($1, $2, $3, 'PENDING')
+            RETURNING
+                user_id,
+                doctor_number,
+                name,
+                doctor_registration_status`,
+                [
+                    user.id,
+                    doctorNumber,
+                    name
+                ]
+            );
+    
+    const doctor = doctorResult.rows[0];
+
+    await client.query(
+        `INSERT INTO email_verification_tokens(
+                user_id,
+                token_hash,
+                expires_at
+                 )
+                VALUES ($1, $2, $3)`,
+                [
+                    user.id,
+                    verificationTokenHash,
+                    verificationTokenExpiresAt
+                ]
+    );
+
+    await client.query("COMMIT");
+
+    return {
+        useId: user.id,
+        email: user.email,
+        doctorNumber: doctor.doctor_number,
+        name:doctor.name,
+        doctorRegistrationStatus: doctor.doctor_registration_status
+ };
+  } catch(error){
+        await client.query("ROLLBACK");
+    throw error;
+     } finally {
+        client.release();
+    }
+
+};
+
+
+
 const verifyEmailToken = async (tokenHash) => {
  
     const client = await pool.connect();
@@ -253,11 +343,14 @@ const findUserForLogin = async (email) => {
           u.role,
           u.is_email_verified,
           u.is_active,
-          p.name
+          COALESCE(p.name, d.name) AS name,
+          d.doctor_registration_status
 
           FROM users u
           LEFT JOIN patients p
-           on p.user_id = u.id
+           ON p.user_id = u.id
+          LEFT JOIN doctors d
+            ON d.user_id = u.id
           WHERE u.email = $1
           LIMIT 1`,
           [email]
@@ -447,6 +540,7 @@ const authRepository = {
     findUserForPasswordReset,
     replacePasswordResetToken,
     resetPassword,
+    createDoctorAccount,
 };
 
 

@@ -1,3 +1,5 @@
+import { PUBLIC_SIGNUP_ROLES } from "../../constants/roles.js";
+
 const hasValue = (value) => {
     return (
         value !== undefined &&
@@ -9,7 +11,7 @@ const hasValue = (value) => {
 const validateSignup = (data) => {
     const errors = {};
 
-    const { email, password, name } = data;
+    const { email, password, name, userType } = data;
 
     if (!hasValue(email)) {
         errors.email = "Email is required";
@@ -39,8 +41,20 @@ const validateSignup = (data) => {
         errors.name = "Name must be a string";
     } else if (name.trim().length < 2) {
         errors.name = "Name must be at least 2 characters";
-    } else if (name.trim().length > 100) {
+    } else if (name.trim().length > 200) {
         errors.name = "Name must not exceed 100 characters";
+    }
+
+
+
+    if(hasValue(userType)){
+        if(typeof userType !== "string"){
+            errors.userType = "User type must be a string";
+        } else if (!PUBLIC_SIGNUP_ROLES.includes(userType)){
+            errors.userType = "User type must be PATIENT of DOCTOR"
+        }
+            
+        
     }
 
     return {
