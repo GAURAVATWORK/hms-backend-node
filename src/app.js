@@ -6,6 +6,7 @@ import profileRoutes from "./features/profile/profile.routes.js";
 import specialityRoutes from "./features/speciality/speciality.routes.js";
 import qualificationRoutes from "./features/qualification/qualification.routes.js";
 import { handleLocalStorageRequest} from "./services/storage/local-storage.handler.js";
+import doctorRoutes from "./features/doctor/doctor.routes.js";
 
 const handleStorageRoute = async (req, res) => {
 
@@ -36,16 +37,14 @@ const app = http.createServer(
 
         try {
 
-            const authRouteHandled =
-                await authRoutes(req, res);
+            const authRouteHandled = await authRoutes(req, res);
 
             if (authRouteHandled) {
                 return;
             }
 
 
-            const profileRouteHandled =
-                await profileRoutes(req, res);
+            const profileRouteHandled = await profileRoutes(req, res);
 
             if (profileRouteHandled) {
                 return;
@@ -62,9 +61,12 @@ const app = http.createServer(
         return;
        }
 
+       const doctorRouteHandled = await doctorRoutes(req, res);
+          if (doctorRouteHandled) {
+             return;
+            }
 
-            const storageRouteHandled =
-                await handleStorageRoute(req, res);
+            const storageRouteHandled = await handleStorageRoute(req, res);
 
             if (storageRouteHandled) {
                 return;
