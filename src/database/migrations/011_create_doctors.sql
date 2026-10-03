@@ -33,8 +33,7 @@ CREATE TABLE IF NOT EXISTS doctors (
 
     offline_consultation_fee NUMERIC(10,2),
 
-    doctor_registration_status VARCHAR(20)
-        NOT NULL DEFAULT 'PENDING',
+    doctor_registration_status VARCHAR(20),
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
@@ -74,7 +73,8 @@ CREATE TABLE IF NOT EXISTS doctors (
 
     CONSTRAINT chk_doctors_registration_status
         CHECK (
-            doctor_registration_status IN (
+            doctor_registration_status IS NULL
+            OR doctor_registration_status IN (
                 'PENDING',
                 'VERIFIED',
                 'REJECTED'
@@ -82,14 +82,15 @@ CREATE TABLE IF NOT EXISTS doctors (
         ),
 
 
-    CONSTRAINT chk_verified_doctor_profile
-        CHECK (
-            doctor_registration_status <> 'VERIFIED'
-            OR (
-                medical_registration_number IS NOT NULL
-                AND offline_consultation_fee IS NOT NULL
-            )
+CONSTRAINT chk_verified_doctor_profile
+    CHECK (
+        doctor_registration_status IS NULL
+        OR doctor_registration_status <> 'VERIFIED'
+        OR (
+            medical_registration_number IS NOT NULL
+            AND offline_consultation_fee IS NOT NULL
         )
+    )
 );
 
 

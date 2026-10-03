@@ -245,12 +245,12 @@ if(!user){
 }
 
 
-if(!user.is_email_verified){
-  const error = new Error("Please verify your email before login in");
-  error.code = "EMAIL_NOT_VERIFIED";
-  error.statusCode= 403;
-  throw error;
-}
+// if(!user.is_email_verified){
+//   const error = new Error("Please verify your email before login in");
+//   error.code = "EMAIL_NOT_VERIFIED";
+//   error.statusCode= 403;
+//   throw error;
+// }
 
 if(!user.is_active){
   const error = new Error("Your account is inactive");
@@ -268,6 +268,40 @@ if(!passwordMatch){
   const error = new Error("Invalid email or password");
   error.code = "INVALID_CREDENTIALS";
   error.statusCode = 401;
+  throw error;
+}
+
+if(!user.is_email_verified){
+
+  const verificationToken = generateVerificationToken();
+
+  const verificationTokenHash = hashToken(
+    verificationToken
+  );
+
+  const verificationTokenExpiresAt = new Date(
+    Date.now() + 30 * 60 * 1000
+  );
+
+  await authRepository.replaceEmailVerificationToken({
+    userId: user.id,
+    verificationTokenHash,
+    verificationTokenExpiresAt,
+  });
+
+  await emailService.sendVerificationEmail({
+    email: user.email,
+    name: user.name,
+    verificationToken,
+  });
+
+  const error = new Error(
+    "Your email is not verified. A verification email has been sent to your registered email address."
+  );
+
+  error.code = "EMAIL_NOT_VERIFIED";
+  error.statusCode = 403;
+
   throw error;
 }
 

@@ -31,8 +31,45 @@ const readLocalFile = async (storageKey) => {
     return fs.readFile(filePath);
 };
 
+const writeLocalFile = async (storageKey, fileBuffer) => {
+    const filePath = getLocalFilePath(storageKey);
+
+    await fs.mkdir(path.dirname(filePath), {
+        recursive: true,
+    });
+
+    await fs.writeFile(filePath, fileBuffer);
+
+    return filePath;
+};
+
+const copyLocalFile = async (sourceFilePath, storageKey) => {
+    const destinationFilePath = getLocalFilePath(storageKey);
+
+    await fs.mkdir(path.dirname(destinationFilePath), {
+        recursive: true,
+    });
+
+    await fs.copyFile(
+        sourceFilePath,
+        destinationFilePath
+    );
+
+    return destinationFilePath;
+};
+
+const deleteLocalFile = async (storageKey) => {
+    const filePath = getLocalFilePath(storageKey);
+
+    await fs.rm(filePath, {
+        force: true,
+    });
+};
 
 export {
     getLocalFilePath,
-    readLocalFile
+    readLocalFile,
+    writeLocalFile,
+    copyLocalFile,
+    deleteLocalFile,
 };

@@ -1,5 +1,4 @@
 import http from "http";
-
 import authRoutes from "./features/auth/auth.routes.js";
 import webRoutes from "./routes/web.routes.js";
 import profileRoutes from "./features/profile/profile.routes.js";
@@ -7,6 +6,9 @@ import specialityRoutes from "./features/speciality/speciality.routes.js";
 import qualificationRoutes from "./features/qualification/qualification.routes.js";
 import { handleLocalStorageRequest} from "./services/storage/local-storage.handler.js";
 import doctorRoutes from "./features/doctor/doctor.routes.js";
+import identityProofRoutes from "./features/identity-proof/identity-proof.routes.js";
+import verificationDocumentTypeRoutes from "./features/verification-document-type/verification-document-type.routes.js";
+import verificationDocumentRoutes from "./features/verification-document/verification-document.routes.js";
 
 const handleStorageRoute = async (req, res) => {
 
@@ -66,7 +68,24 @@ const app = http.createServer(
              return;
             }
 
-            const storageRouteHandled = await handleStorageRoute(req, res);
+      const identityProofRouteHandled  = await identityProofRoutes(req,res);
+       if(identityProofRouteHandled){
+        return;
+       }
+
+       const handledByVerificationDocumentTypeRoutes = await verificationDocumentTypeRoutes(req, res);
+
+        if (handledByVerificationDocumentTypeRoutes) {
+           return;
+        }
+
+        const handledByVerificationDocumentRoutes = await verificationDocumentRoutes(req, res);
+
+        if (handledByVerificationDocumentRoutes) {
+            return;
+        }
+
+       const storageRouteHandled = await handleStorageRoute(req, res);
 
             if (storageRouteHandled) {
                 return;

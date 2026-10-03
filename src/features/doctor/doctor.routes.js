@@ -4,7 +4,7 @@ import runMiddleware from "../../middleware/pipeline.js";
 
 import User_Roles from "../../constants/roles.js";
 
-import { registerDoctorController,} from "./doctor.controller.js";
+import { getDoctorProfileController, registerDoctorController, updateDoctorProfileController} from "./doctor.controller.js";
 
 
 const doctorRoutes = async (req, res) => {
@@ -39,6 +39,43 @@ const doctorRoutes = async (req, res) => {
         return true;
     }
 
+  if(req.method === "GET" && requestUrl.pathname === "/api/v1/doctors/profile"){
+    await runMiddleware(
+        req,
+        res,
+        [
+            authentication,
+            authorizaton(User_Roles.DOCTOR),
+        ],
+        getDoctorProfileController
+    );
+    return true;
+  }
+
+
+  /*
+ * PATCH /api/v1/doctors/profile
+ */
+
+if (
+    req.method === "PATCH" &&
+    requestUrl.pathname === "/api/v1/doctors/profile"
+) {
+
+    await runMiddleware(
+        req,
+        res,
+        [
+            authentication,
+            authorizaton(
+                User_Roles.DOCTOR
+            ),
+        ],
+        updateDoctorProfileController
+    );
+
+    return true;
+}
 
     return false;
 };

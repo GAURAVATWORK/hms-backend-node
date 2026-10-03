@@ -10,7 +10,16 @@ const getImageUrl = (imageKey) => {
     return `${env.apiBaseUrl}/storage/${imageKey}`;
 };
 
+const getVerificationDocumentUrl = (documentKey) => {
+    if (!documentKey) {
+        return null;
+    }
+
+    return `${env.apiBaseUrl}/storage/${documentKey}`;
+};
+
 
 export {
-    getImageUrl
+    getImageUrl,
+    getVerificationDocumentUrl,
 };
