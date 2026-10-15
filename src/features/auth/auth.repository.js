@@ -145,7 +145,7 @@ const createDoctorAccount  = async({
                 name,
                 doctor_registration_status
             )
-            VALUES($1, $2, $3, 'PENDING')
+            VALUES($1, $2, $3, NULL)
             RETURNING
                 user_id,
                 doctor_number,
@@ -546,3 +546,4 @@ const authRepository = {
 
 
 export default authRepository;
+

@@ -9,6 +9,7 @@ import doctorRoutes from "./features/doctor/doctor.routes.js";
 import identityProofRoutes from "./features/identity-proof/identity-proof.routes.js";
 import verificationDocumentTypeRoutes from "./features/verification-document-type/verification-document-type.routes.js";
 import verificationDocumentRoutes from "./features/verification-document/verification-document.routes.js";
+import adminRoutes from "./features/admin/admin.routes.js";
 
 const handleStorageRoute = async (req, res) => {
 
@@ -84,6 +85,12 @@ const app = http.createServer(
         if (handledByVerificationDocumentRoutes) {
             return;
         }
+
+        const handledByAdmin = await adminRoutes(req, res);
+
+            if (handledByAdmin) {
+              return;
+                }
 
        const storageRouteHandled = await handleStorageRoute(req, res);
 
