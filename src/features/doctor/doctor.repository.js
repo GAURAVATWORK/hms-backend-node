@@ -1,6 +1,7 @@
 import pool from "../../config/database.js";
 
 
+
 const registerDoctor = async ({
     doctorId,
     phone,
@@ -20,141 +21,222 @@ const registerDoctor = async ({
     specialityIds,
     primarySpecialityId,
 }) => {
-
     const client = await pool.connect();
 
     try {
-
-        /*
-         * Start transaction.
-         *
-         * All Doctor registration changes must succeed together.
-         * If any operation fails, the entire transaction is rolled back.
-         */
-
         await client.query("BEGIN");
 
-
-        /*
-         * Verify that the Doctor profile exists.
-         *
-         * FOR UPDATE locks this Doctor row until the transaction
-         * finishes.
-         */
-
+        // Lock and read the existing doctor profile.
         const doctorResult = await client.query(
-            `SELECT
+            `
+            SELECT
                 user_id,
-                doctor_registration_status
-             FROM doctors
-             WHERE user_id = $1
-             FOR UPDATE`,
+                doctor_registration_status,
+                phone,
+                medical_registration_number,
+                medical_registration_authority,
+                experience_years,
+                bio,
+                hospital_or_clinic_name,
+                address_line_1,
+                address_line_2,
+                city,
+                state,
+                postal_code,
+                country,
+                offline_consultation_fee
+            FROM doctors
+            WHERE user_id = $1
+            FOR UPDATE
+            `,
             [doctorId]
         );
 
-
         if (doctorResult.rows.length === 0) {
-
-            const error = new Error(
-                "Doctor profile was not found."
-            );
-
+            const error = new Error("Doctor profile was not found.");
             error.statusCode = 404;
             error.code = "DOCTOR_NOT_FOUND";
-
             throw error;
         }
 
+        const existingDoctor = doctorResult.rows[0];
 
-        /*
-         * Validate selected qualifications against the database.
-         *
-         * Only active qualifications are allowed.
-         */
+        // Compare nullable database values safely.
+        const valuesChanged = (oldValue, newValue) => {
+            if (oldValue == null && newValue == null) {
+                return false;
+            }
 
+            if (oldValue == null || newValue == null) {
+                return true;
+            }
+
+            return String(oldValue) !== String(newValue);
+        };
+
+        // Validate selected qualifications.
         const qualificationResult = await client.query(
-            `SELECT
-                id
-             FROM qualifications
-             WHERE id = ANY($1::uuid[])
-             AND is_active = TRUE`,
+            `
+            SELECT id
+            FROM qualifications
+            WHERE id = ANY($1::uuid[])
+              AND is_active = TRUE
+            `,
             [qualificationIds]
         );
-
 
         if (
             qualificationResult.rows.length !==
             qualificationIds.length
         ) {
-
             const error = new Error(
                 "One or more selected qualifications are invalid or inactive."
             );
-
             error.statusCode = 400;
             error.code = "INVALID_QUALIFICATIONS";
-
             throw error;
         }
 
-
-        /*
-         * Validate selected specialities against the database.
-         *
-         * Only active specialities are allowed.
-         */
-
+        // Validate selected specialities.
         const specialityResult = await client.query(
-            `SELECT
-                id
-             FROM specialities
-             WHERE id = ANY($1::uuid[])
-             AND is_active = TRUE`,
+            `
+            SELECT id
+            FROM specialities
+            WHERE id = ANY($1::uuid[])
+              AND is_active = TRUE
+            `,
             [specialityIds]
         );
 
-
         if (
-            specialityResult.rows.length !==
-            specialityIds.length
+            specialityResult.rows.length !== specialityIds.length
         ) {
-
             const error = new Error(
                 "One or more selected specialities are invalid or inactive."
             );
-
             error.statusCode = 400;
             error.code = "INVALID_SPECIALITIES";
-
             throw error;
         }
 
-
-        /*
-         * Verify that the primary speciality is one of
-         * the selected specialities.
-         */
-
+        // The primary speciality must be selected.
         if (!specialityIds.includes(primarySpecialityId)) {
-
             const error = new Error(
                 "Primary speciality must be one of the selected specialities."
             );
-
             error.statusCode = 400;
             error.code = "INVALID_PRIMARY_SPECIALITY";
-
             throw error;
         }
 
+        
+        
 
-        /*
-         * Update Doctor profile information.
-         */
 
+        // Read existing qualifications and specialities before updating.
+        const existingQualificationsResult = await client.query(
+            `
+            SELECT qualification_id
+            FROM doctor_qualifications
+            WHERE doctor_id = $1
+            `,
+            [doctorId]
+        );
+
+        const existingSpecialitiesResult = await client.query(
+            `
+            SELECT speciality_id, is_primary
+            FROM doctor_specialities
+            WHERE doctor_id = $1
+            `,
+            [doctorId]
+        );
+
+        const normalizeIds = (ids) =>
+            ids.map(String).sort();
+
+        const qualificationsChanged =
+            JSON.stringify(
+                normalizeIds(
+                    existingQualificationsResult.rows.map(
+                        (row) => row.qualification_id
+                    )
+                )
+            ) !==
+            JSON.stringify(normalizeIds(qualificationIds));
+
+        const normalizeSpecialities = (items) =>
+            items
+                .map((item) => ({
+                    id: String(item.id),
+                    isPrimary: item.isPrimary,
+                }))
+                .sort((a, b) => a.id.localeCompare(b.id));
+
+        const existingSpecialities = normalizeSpecialities(
+            existingSpecialitiesResult.rows.map((row) => ({
+                id: row.speciality_id,
+                isPrimary: row.is_primary,
+            }))
+        );
+
+        const submittedSpecialities = normalizeSpecialities(
+            specialityIds.map((id) => ({
+                id,
+                isPrimary: id === primarySpecialityId,
+            }))
+        );
+
+        const specialitiesChanged =
+            JSON.stringify(existingSpecialities) !==
+            JSON.stringify(submittedSpecialities);
+
+        // Determine which review sections need a new review.
+        const professionalDetailsChanged = [
+            valuesChanged(existingDoctor.phone, phone),
+            valuesChanged(
+                existingDoctor.medical_registration_number,
+                medicalRegistrationNumber
+            ),
+            valuesChanged(
+                existingDoctor.medical_registration_authority,
+                medicalRegistrationAuthority
+            ),
+            valuesChanged(
+                existingDoctor.experience_years,
+                experienceYears
+            ),
+            valuesChanged(existingDoctor.bio, bio),
+            valuesChanged(
+                existingDoctor.hospital_or_clinic_name,
+                hospitalOrClinicName
+            ),
+            valuesChanged(
+                existingDoctor.address_line_1,
+                addressLine1
+            ),
+            valuesChanged(
+                existingDoctor.address_line_2,
+                addressLine2
+            ),
+            valuesChanged(existingDoctor.city, city),
+            valuesChanged(existingDoctor.state, state),
+            valuesChanged(existingDoctor.postal_code, postalCode),
+            valuesChanged(existingDoctor.country, country),
+            qualificationsChanged,
+            specialitiesChanged,
+        ].some(Boolean);
+
+        const offlineFeeChanged = valuesChanged(
+            existingDoctor.offline_consultation_fee,
+            offlineConsultationFee
+        );
+
+        // Update doctor profile fields.
         await client.query(
-            `UPDATE doctors
-             SET
+            `
+            UPDATE doctors
+            SET
                 phone = $1,
                 medical_registration_number = $2,
                 medical_registration_authority = $3,
@@ -169,7 +251,8 @@ const registerDoctor = async ({
                 country = $12,
                 offline_consultation_fee = $13,
                 updated_at = NOW()
-             WHERE user_id = $14`,
+            WHERE user_id = $14
+            `,
             [
                 phone,
                 medicalRegistrationNumber,
@@ -188,70 +271,47 @@ const registerDoctor = async ({
             ]
         );
 
-
-        /*
-         * Remove existing Doctor qualifications.
-         *
-         * This allows a Doctor to submit the registration again
-         * with a corrected qualification selection.
-         */
-
+        // Replace qualification associations.
         await client.query(
-            `DELETE FROM doctor_qualifications
-             WHERE doctor_id = $1`,
+            `
+            DELETE FROM doctor_qualifications
+            WHERE doctor_id = $1
+            `,
             [doctorId]
         );
 
-
-        /*
-         * Insert the currently selected qualifications.
-         */
-
         for (const qualificationId of qualificationIds) {
-
             await client.query(
-                `INSERT INTO doctor_qualifications (
+                `
+                INSERT INTO doctor_qualifications (
                     doctor_id,
                     qualification_id
-                 )
-                 VALUES ($1, $2)`,
-                [
-                    doctorId,
-                    qualificationId,
-                ]
+                )
+                VALUES ($1, $2)
+                `,
+                [doctorId, qualificationId]
             );
         }
 
-
-        /*
-         * Remove existing Doctor specialities.
-         *
-         * This also supports resubmission/correction.
-         */
-
+        // Replace speciality associations.
         await client.query(
-            `DELETE FROM doctor_specialities
-             WHERE doctor_id = $1`,
+            `
+            DELETE FROM doctor_specialities
+            WHERE doctor_id = $1
+            `,
             [doctorId]
         );
 
-
-        /*
-         * Insert selected specialities.
-         *
-         * The selected primary speciality receives
-         * is_primary = TRUE.
-         */
-
         for (const specialityId of specialityIds) {
-
             await client.query(
-                `INSERT INTO doctor_specialities (
+                `
+                INSERT INTO doctor_specialities (
                     doctor_id,
                     speciality_id,
                     is_primary
-                 )
-                 VALUES ($1, $2, $3)`,
+                )
+                VALUES ($1, $2, $3)
+                `,
                 [
                     doctorId,
                     specialityId,
@@ -260,55 +320,111 @@ const registerDoctor = async ({
             );
         }
 
+        /*
+         * Create or reset only the review sections whose
+         * submitted data has changed.
+         *
+         * Existing review records are retained as history.
+         */
+        const reviewSections = [];
+
+        if (professionalDetailsChanged) {
+            reviewSections.push("PROFESSIONAL_DETAILS");
+        }
+
+        if (offlineFeeChanged) {
+            reviewSections.push("OFFLINE_CONSULTATION_FEE");
+        }
+
+        for (const itemType of reviewSections) {
+            await client.query(
+                `
+                UPDATE doctor_registration_item_reviews
+                SET
+                    is_current = FALSE,
+                    updated_at = NOW()
+                WHERE doctor_id = $1
+                  AND item_type = $2
+                  AND is_current = TRUE
+                `,
+                [doctorId, itemType]
+            );
+
+            await client.query(
+                `
+                INSERT INTO doctor_registration_item_reviews (
+                    doctor_id,
+                    item_type,
+                    status,
+                    is_current
+                )
+                VALUES ($1, $2, 'PENDING', TRUE)
+                `,
+                [doctorId, itemType]
+            );
+        }
 
         /*
-         * Keep the Doctor registration status as PENDING.
-         *
-         * Submission does not mean admin verification.
+         * On initial submission, initialize any missing review
+         * sections as PENDING without resetting existing reviews.
          */
+        for (const itemType of [
+            "PROFESSIONAL_DETAILS",
+            "OFFLINE_CONSULTATION_FEE",
+        ]) {
+            await client.query(
+                `
+                INSERT INTO doctor_registration_item_reviews (
+                    doctor_id,
+                    item_type,
+                    status,
+                    is_current
+                )
+                SELECT $1, $2, 'PENDING', TRUE
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM doctor_registration_item_reviews
+                    WHERE doctor_id = $1
+                      AND item_type = $2
+                      AND is_current = TRUE
+                )
+                `,
+                [doctorId, itemType]
+            );
+        }
 
+        /*
+         * A submitted or resubmitted registration awaits review.
+         * Signup and email verification remain unchanged.
+         */
         const updatedDoctorResult = await client.query(
-            `UPDATE doctors
-             SET
+            `
+            UPDATE doctors
+            SET
                 doctor_registration_status = 'PENDING',
                 updated_at = NOW()
-             WHERE user_id = $1
-             RETURNING
+            WHERE user_id = $1
+            RETURNING
                 user_id,
                 doctor_number,
                 name,
-                doctor_registration_status`,
+                doctor_registration_status
+            `,
             [doctorId]
         );
 
-
-        /*
-         * Commit the entire transaction.
-         */
-
         await client.query("COMMIT");
 
-
         return updatedDoctorResult.rows[0];
-
     } catch (error) {
-
-        /*
-         * If anything fails, undo every database change
-         * performed in this transaction.
-         */
-
-        await client.query("ROLLBACK");
+        try {
+            await client.query("ROLLBACK");
+        } catch {
+            // Preserve the original error.
+        }
 
         throw error;
-
     } finally {
-
-        /*
-         * Always release the PostgreSQL connection back
-         * to the connection pool.
-         */
-
         client.release();
     }
 };
